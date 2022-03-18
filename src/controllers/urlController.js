@@ -1,6 +1,35 @@
 import { v4 as uuid } from "uuid";
 import { connection } from "../database.js";
 
+export async function deleteShortUrl (req, res) {
+
+    const userId = res.locals.user.id;
+    const {id} = req.params; 
+
+    try {
+        const result = connection.query(`
+            SELECT * FROM "shortenedUrls"
+            WHERE id = $1 AND "userId" = $2
+        `, [id, userId]);
+
+        if(result){
+            await connection.query(`
+                DELETE FROM "shortenedUrls"
+                WHERE id = $1
+            `, [id]);
+        } else {
+            return res.sendStatus(401)
+        }
+
+        res.sendStatus(204);
+
+
+    } catch (error) {
+        console.log(error)
+        res.sendStatus(500);
+    }
+}
+
 export async function getUrl(req, res) {
     const { shortUrl } = req.params;
 
