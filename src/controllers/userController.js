@@ -27,9 +27,42 @@ export async function createUser(req, res) {
 
 export async function getUser(req, res) {
   const { user } = res.locals;
+  const { id } = req.params;
 
   try {
-    res.send(user);
+    if (!req.params.id) {
+      res.send(user);
+    }
+
+    const result = await connection.query(`
+      SELECT  users.id, users.name,
+      SUM("visitCount") AS "visitCount",
+        urls.id AS "urlId", urls."shortUrl", urls.url, urls."visitCount" AS "urlVisitCount"
+      FROM  users 
+      JOIN  urls
+      ON  urls."userId" = users.id
+      WHERE  users.id = $1
+      GROUP BY  urls.id, users.id
+    `, [id]);
+
+    const userData = {
+      id:result[0].id,
+      name:result[0].name,
+      visitCount:result[0].visitCount,
+      shortenedUrls: result.map(url=> ({
+        id:url.urlId,
+        shortUrl:url.shortUrl,
+        url:url.url,
+        visitCount:url.urlVisitCount
+      }))
+    }
+    
+    if(!result){
+      return res.sendStatus(404);
+    }
+
+    res.send(userData);
+
   } catch (error) {
     console.log(error);
     return res.sendStatus(500);
